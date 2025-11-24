@@ -1,21 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3D Word Logo Project</title>
+    <title>3D Word Logo Project (TVX)</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; display: flex; flex-direction: column; align-items: center; }
-        canvas { background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); margin-top: 20px;}
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eef2f3; display: flex; flex-direction: column; align-items: center; }
+        canvas { background: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 4px; margin-top: 20px;}
         #ui-container {
-            background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2);
-            width: 512px; margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+            background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 512px; margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
         }
-        .control-group { margin-bottom: 10px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; }
-        input[type="range"] { width: 100%; }
-        button { grid-column: span 2; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; font-size: 16px; }
+        .control-group { margin-bottom: 5px; }
+        label { font-weight: 600; display: block; margin-bottom: 5px; color: #333; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        input[type="color"] { width: 100%; height: 30px; border: none; cursor: pointer; }
+        
+        button { 
+            grid-column: span 2; padding: 12px; background: #007bff; color: white; 
+            border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;
+            transition: background 0.2s;
+        }
         button:hover { background: #0056b3; }
+        
+        #status-box { grid-column: span 2; text-align: center; font-style: italic; color: #666; background: #f9f9f9; padding: 5px; border-radius: 4px;}
     </style>
 
+    <!-- Vertex Shader -->
     <script id="vertex-shader" type="x-shader/x-vertex">
     #version 300 es
 
@@ -31,23 +40,25 @@
 
     void main()
     {
-        // Calculate position
+        // 1. Calculate position
         gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
 
-        // Simple Diffuse Lighting (Lambertian)
-        // Transform normal to view space (simplified for non-scaling rotation)
-        vec3 pos = (uModelViewMatrix * aPosition).xyz;
+        // 2. Lighting Calculation (Lambertian Reflection)
+        // We only care about rotation for normals, so we grab the 3x3 part of ModelView implicitly
+        // For a simple assignment, we assume uniform scaling, so direct normal transform is okay.
+        vec3 normal = normalize( mat3(uModelViewMatrix) * aNormal );
+        vec3 lightDir = normalize(uLightDirection);
         
-        // Basic lighting calculation to give 3D depth perception
-        // We ensure the light interacts with the normals
-        float light = max(dot(aNormal, normalize(uLightDirection)), 0.2); 
+        // Dot product gives intensity. We add 0.3 ambient light so backfaces aren't pitch black.
+        float light = max(dot(normal, lightDir), 0.3); 
 
-        // Apply lighting to the requested user color
+        // 3. Apply lighting to the requested user color
         vec3 lightedColor = uColor.rgb * light;
         vColor = vec4(lightedColor, 1.0);
     }
     </script>
 
+    <!-- Fragment Shader -->
     <script id="fragment-shader" type="x-shader/x-fragment">
     #version 300 es
     precision mediump float;
@@ -61,7 +72,9 @@
     }
     </script>
 
+    <!-- Libraries -->
     <script type="text/javascript" src="common_libs.js"></script>
+    <!-- Main Logic -->
     <script type="text/javascript" src="logo.js"></script>
 </head>
 <body>
@@ -69,7 +82,7 @@
     <div id="ui-container">
         <div class="control-group">
             <label for="colorPicker">Logo Color</label>
-            <input type="color" id="colorPicker" value="#ff0000">
+            <input type="color" id="colorPicker" value="#0000ff">
         </div>
         
         <div class="control-group">
@@ -79,15 +92,14 @@
 
         <div class="control-group">
             <label for="speedSlider">Animation Speed</label>
-            <input type="range" id="speedSlider" min="0.5" max="5.0" step="0.5" value="1.5">
+            <input type="range" id="speedSlider" min="0.1" max="4.0" step="0.1" value="1.5">
         </div>
 
-        <div class="control-group">
-            <label>Current Status</label>
-            <span id="statusText">Waiting...</span>
+        <div id="status-box">
+            Status: <span id="statusText">Initializing...</span>
         </div>
 
-        <button id="resetBtn">Restart Animation</button>
+        <button id="resetBtn">Reset Animation Loop</button>
     </div>
 
     <canvas id="gl-canvas" width="512" height="512">
