@@ -7,7 +7,7 @@ var gl;
 var modelViewMatrixLoc, projectionMatrixLoc;
 var colorLoc, lightDirLoc;
 
-// --- Data Buffers (Global so we can update them dynamically) ---
+// --- Data Buffers ---
 var pointsArray = [];
 var normalsArray = [];
 var numVertices = 0;
@@ -18,10 +18,11 @@ var animationState = 0;
 var currentAngle = 0;
 var currentScale = 1.0;
 var idleTime = 0;
+var isAnimating = true; 
 
 // --- UI Parameters ---
 var param = {
-    color: vec4(0.0, 0.0, 1.0, 1.0), // Start with Blue
+    color: vec4(1.0, 0.8, 0.0, 1.0), // Gold
     depth: 0.5,
     speed: 1.5
 };
@@ -34,19 +35,20 @@ window.onload = function init() {
 
     // Configure WebGL
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.95, 0.95, 0.95, 1.0); // Light gray background
+    
+    // --- BACKGROUND COLOR SETTING ---
+    // Set to Opaque Black
+    gl.clearColor(0.0, 0.0, 0.0, 1.0); 
+    
     gl.enable(gl.DEPTH_TEST);
 
     // Initialize Shaders
     var program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
-    // Generate Geometry
     generateLogoGeometry();
 
     // --- Initialize Buffers ---
-    
-    // 1. Normal Buffer
     nBuffer = gl.createBuffer(); 
     gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
@@ -55,7 +57,6 @@ window.onload = function init() {
     gl.vertexAttribPointer(aNormal, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(aNormal);
 
-    // 2. Vertex (Position) Buffer
     vBuffer = gl.createBuffer(); 
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
@@ -64,16 +65,13 @@ window.onload = function init() {
     gl.vertexAttribPointer(aPosition, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(aPosition);
 
-    // Get Uniform Locations
     modelViewMatrixLoc = gl.getUniformLocation(program, "uModelViewMatrix");
     projectionMatrixLoc = gl.getUniformLocation(program, "uProjectionMatrix");
     colorLoc = gl.getUniformLocation(program, "uColor");
     lightDirLoc = gl.getUniformLocation(program, "uLightDirection");
 
-    // Setup UI Controls
     setupUI();
     
-    // Handle Window Resize
     window.onresize = function() {
         gl.viewport(0, 0, canvas.width, canvas.height);
     };
@@ -82,7 +80,6 @@ window.onload = function init() {
 };
 
 function setupUI() {
-    // 1. Color Picker
     document.getElementById("colorPicker").oninput = function(event) {
         var hex = event.target.value;
         var r = parseInt(hex.substr(1,2), 16) / 255;
@@ -91,10 +88,8 @@ function setupUI() {
         param.color = vec4(r, g, b, 1.0);
     };
 
-    // 2. Extrusion Depth Slider
     document.getElementById("depthSlider").oninput = function(event) {
         param.depth = parseFloat(event.target.value);
-        
         generateLogoGeometry(); 
         
         gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
@@ -104,54 +99,59 @@ function setupUI() {
         gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
     };
 
-    // 3. Speed Slider
     document.getElementById("speedSlider").oninput = function(event) {
         param.speed = parseFloat(event.target.value);
     };
 
-    // 4. Reset Button
     document.getElementById("resetBtn").onclick = function() {
         animationState = 0;
         currentAngle = 0;
         currentScale = 1.0;
         idleTime = 0;
+        isAnimating = true; 
+        document.getElementById("toggleBtn").innerText = "Stop";
+        document.getElementById("toggleBtn").style.backgroundColor = "#dc3545"; 
+    };
+
+    document.getElementById("toggleBtn").onclick = function() {
+        isAnimating = !isAnimating;
+        var btn = document.getElementById("toggleBtn");
+        if(isAnimating) {
+            btn.innerText = "Stop";
+            btn.style.backgroundColor = "#dc3545"; 
+        } else {
+            btn.innerText = "Resume";
+            btn.style.backgroundColor = "#28a745"; 
+        }
     };
 }
 
-// --- Geometry Generation: TVX ---
 function generateLogoGeometry() {
     pointsArray = [];
     normalsArray = [];
 
     var d = param.depth * 0.2; 
 
-    // Primitive: Rotated Cube (Bar)
     function addBar(w, h, depth, tx, ty, rotDeg) {
         var hw = w/2, hh = h/2, hd = depth/2;
         var ang = radians(rotDeg);
         var c = Math.cos(ang);
         var s = Math.sin(ang);
 
-        // 8 raw vertices of a box
         var localVerts = [
-            vec3(-hw, -hh,  hd), vec3(-hw, hh,  hd), vec3(hw, hh,  hd), vec3(hw, -hh,  hd), // Front
-            vec3(-hw, -hh, -hd), vec3(-hw, hh, -hd), vec3(hw, hh, -hd), vec3(hw, -hh, -hd)  // Back
+            vec3(-hw, -hh,  hd), vec3(-hw, hh,  hd), vec3(hw, hh,  hd), vec3(hw, -hh,  hd), 
+            vec3(-hw, -hh, -hd), vec3(-hw, hh, -hd), vec3(hw, hh, -hd), vec3(hw, -hh, -hd) 
         ];
 
-        // Transform vertices
         var transVerts = [];
         for(var i=0; i<8; i++) {
             var vx = localVerts[i][0];
             var vy = localVerts[i][1];
-            
-            // 2D Rotation
             var rx = vx * c - vy * s;
             var ry = vx * s + vy * c;
-
             transVerts.push(vec4(rx + tx, ry + ty, localVerts[i][2], 1.0));
         }
 
-        // Create Triangles
         function pushFace(a, b, c, idx, normalDir) {
             var nx = normalDir[0] * c - normalDir[1] * s;
             var ny = normalDir[0] * s + normalDir[1] * c;
@@ -173,29 +173,29 @@ function generateLogoGeometry() {
         pushFace(5, 4, 0, 1, vec3(-1,0,0)); 
     }
 
-    // --- Letter T (Left) ---
-    addBar(0.6, 0.15, d, -0.7, 0.35, 0); // Top
-    addBar(0.15, 0.7, d, -0.7, -0.05, 0); // Stem
+    // T
+    addBar(0.6, 0.15, d, -0.7, 0.35, 0); 
+    addBar(0.15, 0.7, d, -0.7, -0.05, 0); 
 
-    // --- Letter V (Center) ---
-    // FIX: Swapped angles to correct inverted V
-    addBar(0.15, 0.95, d, -0.16, 0.05, 20);  // Left diag (Leans Left)
-    addBar(0.15, 0.95, d,  0.16, 0.05, -20); // Right diag (Leans Right)
+    // V
+    addBar(0.15, 0.95, d, -0.16, 0.05, 20); 
+    addBar(0.15, 0.95, d,  0.16, 0.05, -20);
 
-    // --- Letter X (Right) ---
-    addBar(0.15, 1.0, d, 0.7, 0.0, -30); // /
-    addBar(0.15, 1.0, d, 0.7, 0.0, 30);  // \
+    // X
+    addBar(0.15, 1.0, d, 0.7, 0.0, -30); 
+    addBar(0.15, 1.0, d, 0.7, 0.0, 30);  
     
     numVertices = pointsArray.length;
 }
 
-// --- Animation Sequence Logic ---
 function updateAnimationState() {
+    if (!isAnimating) return;
+
     var step = 2.0 * param.speed; 
     var statusEl = document.getElementById("statusText");
 
     switch(animationState) {
-        case 0: // Right 180
+        case 0: 
             statusEl.innerText = "Phase 1: Rotating Right (180)";
             currentAngle += step;
             if (currentAngle >= 180) {
@@ -203,7 +203,7 @@ function updateAnimationState() {
                 animationState = 1;
             }
             break;
-        case 1: // Return to Center
+        case 1: 
             statusEl.innerText = "Phase 2: Returning to Center";
             currentAngle -= step;
             if (currentAngle <= 0) {
@@ -211,7 +211,7 @@ function updateAnimationState() {
                 animationState = 2;
             }
             break;
-        case 2: // Left 180
+        case 2: 
             statusEl.innerText = "Phase 3: Rotating Left (180)";
             currentAngle -= step;
             if (currentAngle <= -180) {
@@ -219,7 +219,7 @@ function updateAnimationState() {
                 animationState = 3;
             }
             break;
-        case 3: // Return to Center
+        case 3: 
             statusEl.innerText = "Phase 4: Returning to Center";
             currentAngle += step;
             if (currentAngle >= 0) {
@@ -227,7 +227,7 @@ function updateAnimationState() {
                 animationState = 4;
             }
             break;
-        case 4: // Scale Up
+        case 4: 
             statusEl.innerText = "Phase 5: Scaling Up";
             currentScale += 0.01 * param.speed;
             if (currentScale >= 2.0) {
@@ -235,7 +235,7 @@ function updateAnimationState() {
                 animationState = 5;
             }
             break;
-        case 5: // Idle Loop
+        case 5: 
             statusEl.innerText = "Phase 6: Idle Movement Loop";
             idleTime += 0.02 * param.speed;
             currentAngle = Math.sin(idleTime) * 15; 

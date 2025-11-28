@@ -3,24 +3,54 @@
 <head>
     <title>3D Word Logo Project (TVX)</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eef2f3; display: flex; flex-direction: column; align-items: center; }
-        canvas { background: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 4px; margin-top: 20px;}
+        /* Updated Body with a distinct Deep Blue Gradient */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            /* A rich gradient distinct from the black canvas */
+            background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        
+        canvas { 
+            /* Set canvas background to black to match WebGL clear color */
+            background: #000000; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-radius: 4px; 
+            margin-top: 20px;
+            border: 2px solid rgba(255,255,255,0.1); 
+        }
+
         #ui-container {
-            background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            width: 512px; margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+            background: #fff; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            /* Increased width to match new canvas size */
+            width: 800px; 
+            margin-top: 20px;
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px;
         }
         .control-group { margin-bottom: 5px; }
         label { font-weight: 600; display: block; margin-bottom: 5px; color: #333; }
         input[type="range"] { width: 100%; cursor: pointer; }
         input[type="color"] { width: 100%; height: 30px; border: none; cursor: pointer; }
         
+        .btn-group { grid-column: span 2; display: flex; gap: 10px; }
         button { 
-            grid-column: span 2; padding: 12px; background: #007bff; color: white; 
+            flex: 1; padding: 12px; background: #007bff; color: white; 
             border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;
             transition: background 0.2s;
         }
         button:hover { background: #0056b3; }
-        
+        button.stop-btn { background: #dc3545; } 
+        button.stop-btn:hover { background: #a71d2a; }
+
         #status-box { grid-column: span 2; text-align: center; font-style: italic; color: #666; background: #f9f9f9; padding: 5px; border-radius: 4px;}
     </style>
 
@@ -40,19 +70,13 @@
 
     void main()
     {
-        // 1. Calculate position
         gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
 
-        // 2. Lighting Calculation (Lambertian Reflection)
-        // We only care about rotation for normals, so we grab the 3x3 part of ModelView implicitly
-        // For a simple assignment, we assume uniform scaling, so direct normal transform is okay.
         vec3 normal = normalize( mat3(uModelViewMatrix) * aNormal );
         vec3 lightDir = normalize(uLightDirection);
         
-        // Dot product gives intensity. We add 0.3 ambient light so backfaces aren't pitch black.
         float light = max(dot(normal, lightDir), 0.3); 
 
-        // 3. Apply lighting to the requested user color
         vec3 lightedColor = uColor.rgb * light;
         vColor = vec4(lightedColor, 1.0);
     }
@@ -72,9 +96,7 @@
     }
     </script>
 
-    <!-- Libraries -->
     <script type="text/javascript" src="common_libs.js"></script>
-    <!-- Main Logic -->
     <script type="text/javascript" src="logo.js"></script>
 </head>
 <body>
@@ -82,7 +104,7 @@
     <div id="ui-container">
         <div class="control-group">
             <label for="colorPicker">Logo Color</label>
-            <input type="color" id="colorPicker" value="#0000ff">
+            <input type="color" id="colorPicker" value="#ffcc00">
         </div>
         
         <div class="control-group">
@@ -99,10 +121,14 @@
             Status: <span id="statusText">Initializing...</span>
         </div>
 
-        <button id="resetBtn">Reset Animation Loop</button>
+        <div class="btn-group">
+            <button id="toggleBtn" class="stop-btn">Stop</button>
+            <button id="resetBtn">Reset</button>
+        </div>
     </div>
 
-    <canvas id="gl-canvas" width="512" height="512">
+    <!-- Increased Canvas Size to 800x600 -->
+    <canvas id="gl-canvas" width="800" height="600">
         Oops ... your browser doesn't support the HTML5 canvas element
     </canvas>
 
