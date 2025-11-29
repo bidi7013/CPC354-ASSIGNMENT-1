@@ -5,7 +5,7 @@ var gl;
 
 // --- Shader Uniform Locations ---
 var modelViewMatrixLoc, projectionMatrixLoc;
-var colorLoc, lightDirLoc;
+var colorLoc, color2Loc, lightDirLoc, useGradientLoc; 
 
 // --- Data Buffers ---
 var pointsArray = [];
@@ -14,6 +14,7 @@ var numVertices = 0;
 var vBuffer, nBuffer; 
 
 // --- Animation State Variables ---
+var hasStarted = false; // Flag for Start Button
 var animationState = 0; 
 var currentAngle = 0;
 var currentScale = 1.0;
@@ -23,6 +24,8 @@ var isAnimating = true;
 // --- UI Parameters ---
 var param = {
     color: vec4(1.0, 0.8, 0.0, 1.0), // Gold
+    color2: vec4(1.0, 0.0, 0.0, 1.0), // Red
+    useGradient: false,
     depth: 0.5,
     speed: 1.0
 };
@@ -37,7 +40,7 @@ window.onload = function init() {
     gl.viewport(0, 0, canvas.width, canvas.height);
     
     // --- BACKGROUND COLOR SETTING ---
-    // Set to Opaque Black
+    // Opaque Black
     gl.clearColor(0.0, 0.0, 0.0, 1.0); 
     
     gl.enable(gl.DEPTH_TEST);
@@ -65,9 +68,15 @@ window.onload = function init() {
     gl.vertexAttribPointer(aPosition, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(aPosition);
 
+    // --- Get Uniform Locations ---
     modelViewMatrixLoc = gl.getUniformLocation(program, "uModelViewMatrix");
     projectionMatrixLoc = gl.getUniformLocation(program, "uProjectionMatrix");
+    
+    // Ensure all color uniforms are linked
     colorLoc = gl.getUniformLocation(program, "uColor");
+    color2Loc = gl.getUniformLocation(program, "uColor2");
+    useGradientLoc = gl.getUniformLocation(program, "uUseGradient");
+    
     lightDirLoc = gl.getUniformLocation(program, "uLightDirection");
 
     setupUI();
@@ -79,43 +88,29 @@ window.onload = function init() {
     render();
 };
 
-// INITIATIVE: Custom Easing Function (SmoothStep)
-// This function takes a linear value 't' (0 to 1) and smooths the edges.
-// It uses the math formula: 3t^2 - 2t^3
 function smoothStep(t) {
     return t * t * (3.0 - 2.0 * t);
 }
 
-// Update your updateAnimationState() to use this:
-function updateAnimationState() {
-   // ... existing code ...
-   if (t < 1.0) {
-       // Old way: currentAngle = mixScalar(0, 180, t);
-       // YOUR WAY:
-       currentAngle = mixScalar(0, 180, smoothStep(t)); 
-   }
-   // ... apply smoothStep to other steps too ...
-}
-
-// A helper function to draw a scaled block
-// This proves you understand how to abstract repetitive code
 function drawBlock(baseMatrix, tx, ty, tz, sx, sy, sz) {
     var mv = mult(baseMatrix, translate(tx, ty, tz));
     mv = mult(mv, scale(sx, sy, sz));
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv));
-    gl.drawArrays(gl.TRIANGLES, 0, NumVertices);
-}
-
-// Now your drawLetterT function looks incredibly clean and readable:
-function drawLetterT(baseMV) {
-    // Top Bar: x=0, y=0.5, z=0 | scale: x=1, y=0.2, z=paramDepth
-    drawBlock(baseMV, 0.0, 0.5, 0.0, 1.0, 0.2, paramDepth);
-
-    // Vertical Post: x=0, y=0, z=0 | scale: x=0.2, y=0.8, z=paramDepth
-    drawBlock(baseMV, 0.0, 0.0, 0.0, 0.2, 0.8, paramDepth);
+    gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 }
 
 function setupUI() {
+    // START BUTTON
+    document.getElementById("startBtn").onclick = function() {
+        hasStarted = true;
+        this.style.display = "none"; 
+        document.getElementById("statusText").innerText = "Animation Started";
+        
+        document.getElementById("toggleBtn").disabled = false;
+        document.getElementById("resetBtn").disabled = false;
+    };
+
+    // COLOR 1
     document.getElementById("colorPicker").oninput = function(event) {
         var hex = event.target.value;
         var r = parseInt(hex.substr(1,2), 16) / 255;
@@ -124,11 +119,25 @@ function setupUI() {
         param.color = vec4(r, g, b, 1.0);
     };
 
+    // GRADIENT TOGGLE
+    document.getElementById("gradientToggle").onchange = function(event) {
+        param.useGradient = event.target.checked;
+        document.getElementById("colorPicker2").disabled = !param.useGradient;
+    };
+
+    // COLOR 2
+    document.getElementById("colorPicker2").oninput = function(event) {
+        var hex = event.target.value;
+        var r = parseInt(hex.substr(1,2), 16) / 255;
+        var g = parseInt(hex.substr(3,2), 16) / 255;
+        var b = parseInt(hex.substr(5,2), 16) / 255;
+        param.color2 = vec4(r, g, b, 1.0);
+    };
+
+    // DEPTH
     document.getElementById("depthSlider").oninput = function(event) {
         var val = parseFloat(event.target.value);
         param.depth = val;
-        
-        // UPDATED: Update the number indicator text
         document.getElementById("depthIndicator").innerText = val;
 
         generateLogoGeometry(); 
@@ -140,14 +149,14 @@ function setupUI() {
         gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
     };
 
+    // SPEED
     document.getElementById("speedSlider").oninput = function(event) {
         var val = parseFloat(event.target.value);
         param.speed = val;
-
-        // UPDATED: Update the number indicator text
         document.getElementById("speedIndicator").innerText = val;
     };
 
+    // RESET
     document.getElementById("resetBtn").onclick = function() {
         animationState = 0;
         currentAngle = 0;
@@ -158,6 +167,7 @@ function setupUI() {
         document.getElementById("toggleBtn").style.backgroundColor = "#dc3545"; 
     };
 
+    // STOP/RESUME
     document.getElementById("toggleBtn").onclick = function() {
         isAnimating = !isAnimating;
         var btn = document.getElementById("toggleBtn");
@@ -234,7 +244,7 @@ function generateLogoGeometry() {
 }
 
 function updateAnimationState() {
-    if (!isAnimating) return;
+    if (!hasStarted || !isAnimating) return;
 
     var step = 2.0 * param.speed; 
     var statusEl = document.getElementById("statusText");
@@ -312,7 +322,12 @@ function render() {
 
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
     gl.uniformMatrix4fv(projectionMatrixLoc, false, flatten(projectionMatrix));
+    
+    // --- SEND UNIFORMS TO SHADER ---
     gl.uniform4fv(colorLoc, flatten(param.color));
+    gl.uniform4fv(color2Loc, flatten(param.color2));
+    gl.uniform1i(useGradientLoc, param.useGradient ? 1 : 0);
+    // -------------------------------
     
     var lightDir = vec3(0.5, 0.5, 1.0); 
     gl.uniform3fv(lightDirLoc, flatten(lightDir));

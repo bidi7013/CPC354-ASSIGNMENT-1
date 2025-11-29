@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html>
-<head>
+<html lang="en"> <head>
+    <meta charset="UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>3D Word Logo Project (TVX)</title>
+    <link rel="icon" type="image/x-icon" href="tvx_logo.png">
     <style>
         /* Updated Body with a distinct Deep Blue Gradient */
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            /* A rich gradient distinct from the black canvas */
             background: linear-gradient(135deg, #667db6 0%, #014e78 100%);
             min-height: 100vh;
             margin: 0;
@@ -16,7 +19,6 @@
         }
         
         canvas { 
-            /* Set canvas background to black to match WebGL clear color */
             background: #000000; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             border-radius: 4px; 
@@ -30,15 +32,42 @@
             padding: 20px; 
             border-radius: 8px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            /* Increased width to match new canvas size */
             width: 1000px; 
             margin-top: 20px;
             display: grid; 
             grid-template-columns: 1fr 1fr; 
             gap: 15px;
         }
+
+        /* Fixed: Replaced inline styles with CSS classes (no-inline-styles) */
+        .start-btn-container {
+            grid-column: span 2;
+            margin-bottom: 10px;
+        }
+
+        #startBtn {
+            background-color: #28a745;
+            width: 100%;
+        }
+
         .control-group { margin-bottom: 5px; }
+        
         label { font-weight: 600; display: block; margin-bottom: 5px; color: #333; }
+        
+        /* Flexbox for the gradient row to align checkbox and color picker */
+        .gradient-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Override label display for the checkbox to sit inline */
+        .gradient-row label {
+            display: inline-block;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
         input[type="range"] { width: 100%; cursor: pointer; }
         input[type="color"] { width: 100%; height: 30px; border: none; cursor: pointer; }
         
@@ -49,6 +78,8 @@
             transition: background 0.2s;
         }
         button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
         button.stop-btn { background: #dc3545; } 
         button.stop-btn:hover { background: #a71d2a; }
 
@@ -63,7 +94,12 @@
 
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
+    
+    // Updated Uniforms for Gradient
     uniform vec4 uColor;
+    uniform vec4 uColor2;
+    uniform bool uUseGradient;
+
     uniform vec3 uLightDirection;
 
     out vec4 vColor;
@@ -77,7 +113,14 @@
         
         float light = max(dot(normal, lightDir), 0.3); 
 
-        vec3 lightedColor = uColor.rgb * light;
+        vec3 objectColor = uColor.rgb;
+
+        if (uUseGradient) {
+            float t = clamp((aPosition.y * 3.5 + 1.0) / 2.0, 0.0, 1.0);
+            objectColor = mix(uColor.rgb, uColor2.rgb, t);
+        }
+
+        vec3 lightedColor = objectColor * light;
         vColor = vec4(lightedColor, 1.0);
     }
     </script>
@@ -101,11 +144,22 @@
 <body>
 
     <div id="ui-container">
+        <div class="start-btn-container">
+            <button id="startBtn">START ANIMATION</button>
+        </div>
+
         <div class="control-group">
-            <label for="colorPicker">Logo Color</label>
+            <label for="colorPicker">Primary Color</label>
             <input type="color" id="colorPicker" value="#ffcc00">
         </div>
         
+        <div class="control-group gradient-row">
+            <label>
+                <input type="checkbox" id="gradientToggle"> Use Gradient
+            </label>
+            <input type="color" id="colorPicker2" value="#ff0000" disabled title="Gradient Top Color">
+        </div>
+
         <div class="control-group">
             <label for="depthSlider">Extrusion Depth: <span id="depthIndicator">0.5</span></label>
             <input type="range" id="depthSlider" min="0.1" max="2.0" step="0.1" value="0.5">
@@ -117,12 +171,12 @@
         </div>
 
         <div id="status-box">
-            Status: <span id="statusText">Initializing...</span>
+            Status: <span id="statusText">Waiting for Start...</span>
         </div>
 
         <div class="btn-group">
-            <button id="toggleBtn" class="stop-btn">Stop</button>
-            <button id="resetBtn">Reset</button>
+            <button id="toggleBtn" class="stop-btn" disabled>Stop</button>
+            <button id="resetBtn" disabled>Reset</button>
         </div>
     </div>
 
