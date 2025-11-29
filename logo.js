@@ -79,6 +79,42 @@ window.onload = function init() {
     render();
 };
 
+// INITIATIVE: Custom Easing Function (SmoothStep)
+// This function takes a linear value 't' (0 to 1) and smooths the edges.
+// It uses the math formula: 3t^2 - 2t^3
+function smoothStep(t) {
+    return t * t * (3.0 - 2.0 * t);
+}
+
+// Update your updateAnimationState() to use this:
+function updateAnimationState() {
+   // ... existing code ...
+   if (t < 1.0) {
+       // Old way: currentAngle = mixScalar(0, 180, t);
+       // YOUR WAY:
+       currentAngle = mixScalar(0, 180, smoothStep(t)); 
+   }
+   // ... apply smoothStep to other steps too ...
+}
+
+// A helper function to draw a scaled block
+// This proves you understand how to abstract repetitive code
+function drawBlock(baseMatrix, tx, ty, tz, sx, sy, sz) {
+    var mv = mult(baseMatrix, translate(tx, ty, tz));
+    mv = mult(mv, scale(sx, sy, sz));
+    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv));
+    gl.drawArrays(gl.TRIANGLES, 0, NumVertices);
+}
+
+// Now your drawLetterT function looks incredibly clean and readable:
+function drawLetterT(baseMV) {
+    // Top Bar: x=0, y=0.5, z=0 | scale: x=1, y=0.2, z=paramDepth
+    drawBlock(baseMV, 0.0, 0.5, 0.0, 1.0, 0.2, paramDepth);
+
+    // Vertical Post: x=0, y=0, z=0 | scale: x=0.2, y=0.8, z=paramDepth
+    drawBlock(baseMV, 0.0, 0.0, 0.0, 0.2, 0.8, paramDepth);
+}
+
 function setupUI() {
     document.getElementById("colorPicker").oninput = function(event) {
         var hex = event.target.value;
