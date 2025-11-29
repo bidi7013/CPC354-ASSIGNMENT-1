@@ -163,8 +163,14 @@ function setupUI() {
         currentScale = 1.0;
         idleTime = 0;
         isAnimating = true; 
-        document.getElementById("toggleBtn").innerText = "Stop";
-        document.getElementById("toggleBtn").style.backgroundColor = "#dc3545"; 
+        hasStarted = false;
+        document.getElementById("startBtn").style.display = "block"; 
+        document.getElementById("statusText").innerText = "Waiting for Start...";
+        var toggleBtn = document.getElementById("toggleBtn");
+        toggleBtn.innerText = "Stop";
+        toggleBtn.style.backgroundColor = "#dc3545";
+        toggleBtn.disabled = true;
+        this.disabled = true;
     };
 
     // STOP/RESUME
