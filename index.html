@@ -7,7 +7,7 @@
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             /* A rich gradient distinct from the black canvas */
-            background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);
+            background: linear-gradient(135deg, #667db6 0%, #014e78 100%);
             min-height: 100vh;
             margin: 0;
             display: flex; 
@@ -21,6 +21,7 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             border-radius: 4px; 
             margin-top: 20px;
+            width: 1000px; 
             border: 2px solid rgba(255,255,255,0.1); 
         }
 
@@ -30,7 +31,7 @@
             border-radius: 8px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             /* Increased width to match new canvas size */
-            width: 800px; 
+            width: 1000px; 
             margin-top: 20px;
             display: grid; 
             grid-template-columns: 1fr 1fr; 
@@ -54,7 +55,6 @@
         #status-box { grid-column: span 2; text-align: center; font-style: italic; color: #666; background: #f9f9f9; padding: 5px; border-radius: 4px;}
     </style>
 
-    <!-- Vertex Shader -->
     <script id="vertex-shader" type="x-shader/x-vertex">
     #version 300 es
 
@@ -82,7 +82,6 @@
     }
     </script>
 
-    <!-- Fragment Shader -->
     <script id="fragment-shader" type="x-shader/x-fragment">
     #version 300 es
     precision mediump float;
@@ -108,12 +107,12 @@
         </div>
         
         <div class="control-group">
-            <label for="depthSlider">Extrusion Depth</label>
+            <label for="depthSlider">Extrusion Depth: <span id="depthIndicator">0.5</span></label>
             <input type="range" id="depthSlider" min="0.1" max="2.0" step="0.1" value="0.5">
         </div>
 
         <div class="control-group">
-            <label for="speedSlider">Animation Speed</label>
+            <label for="speedSlider">Animation Speed: <span id="speedIndicator">1.5</span></label>
             <input type="range" id="speedSlider" min="0.1" max="4.0" step="0.1" value="1.5">
         </div>
 
@@ -127,7 +126,6 @@
         </div>
     </div>
 
-    <!-- Increased Canvas Size to 800x600 -->
     <canvas id="gl-canvas" width="800" height="600">
         Oops ... your browser doesn't support the HTML5 canvas element
     </canvas>

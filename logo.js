@@ -89,7 +89,12 @@ function setupUI() {
     };
 
     document.getElementById("depthSlider").oninput = function(event) {
-        param.depth = parseFloat(event.target.value);
+        var val = parseFloat(event.target.value);
+        param.depth = val;
+        
+        // UPDATED: Update the number indicator text
+        document.getElementById("depthIndicator").innerText = val;
+
         generateLogoGeometry(); 
         
         gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
@@ -100,7 +105,11 @@ function setupUI() {
     };
 
     document.getElementById("speedSlider").oninput = function(event) {
-        param.speed = parseFloat(event.target.value);
+        var val = parseFloat(event.target.value);
+        param.speed = val;
+
+        // UPDATED: Update the number indicator text
+        document.getElementById("speedIndicator").innerText = val;
     };
 
     document.getElementById("resetBtn").onclick = function() {
