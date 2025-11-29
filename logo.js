@@ -24,7 +24,7 @@ var isAnimating = true;
 var param = {
     color: vec4(1.0, 0.8, 0.0, 1.0), // Gold
     depth: 0.5,
-    speed: 1.5
+    speed: 1.0
 };
 
 window.onload = function init() {
